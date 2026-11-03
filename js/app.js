@@ -32,6 +32,10 @@
     speaking: false
   };
 
+  // TODO: coordinator cung cấp URL lấy key Meta — KHÔNG tự đoán URL.
+  // Khi có URL thật, điền vào đây thì nút "Lấy key miễn phí" sẽ mở tab mới.
+  var META_KEY_URL = "";
+
   function $(id) { return document.getElementById(id); }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
@@ -75,6 +79,8 @@
       btnReplayVoice: "btnPlayVoice", btnDetailAsk: "btnAskMore",
       setTitle: "setTitle", setApiKeyH: "setApiKey", setApiKeyHint: "setApiKeyHint",
       btnSaveKey: "btnSaveKey", setMockH: "setMockMode", mockDesc: "mockDesc",
+      setGetKeyTitle: "setGetKeyTitle", setGetKeyBody: "setGetKeyBody", btnGetKey: "btnGetKey",
+      setGetKeyStep1: "setGetKeyStep1", setGetKeyStep2: "setGetKeyStep2", setGetKeyStep3: "setGetKeyStep3",
       setUiLangH: "setUiLang", setPrivacyH: "setPrivacyTitle", privacyBody: "privacyBody",
       aboutH: "setTitle", aboutText: "aboutText", btnClearHistory: "btnClearHistory",
       tabScanL: "tabScan", tabHistoryL: "tabHistory", tabSettingsL: "tabSettings",
@@ -576,6 +582,14 @@
       else localStorage.removeItem("mc_apiKey");
       $("keyStatus").textContent = s("keySaved");
       setTimeout(function () { $("keyStatus").textContent = ""; }, 2500);
+    };
+    $("btnGetKey").onclick = function () {
+      if (META_KEY_URL) {
+        window.open(META_KEY_URL, "_blank", "noopener");
+        $("keyUrlStatus").textContent = "";
+      } else {
+        $("keyUrlStatus").textContent = s("keyUrlSoon");
+      }
     };
     $("mockToggle").onchange = function (e) {
       S.mockMode = e.target.checked;
