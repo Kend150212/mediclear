@@ -135,6 +135,14 @@
     <h2 id="setTitle"></h2>
 
     <div class="card">
+      <h3 id="setConnTitle"></h3>
+      <div class="conn-grid">
+        <button class="conn-btn" id="connAuto"><strong id="setConnAuto"></strong><span class="muted small" id="setConnAutoDesc"></span></button>
+        <button class="conn-btn" id="connByok"><strong id="setConnByok"></strong><span class="muted small" id="setConnByokDesc"></span></button>
+      </div>
+    </div>
+
+    <div class="card" id="byokCard">
       <h3 id="setApiKeyH"></h3>
       <p class="muted small" id="setApiKeyHint"></p>
       <input type="password" id="apiKeyInput" autocomplete="off" spellcheck="false">
@@ -187,6 +195,7 @@
 
 <script src="js/i18n.js"></script>
 <script src="js/i18n-keyhelp.js"></script>
+<script src="js/i18n-conn.js"></script>
 <script src="js/fixtures.js"></script>
 <script src="js/bill-art.js"></script>
 <script src="js/db.js"></script>

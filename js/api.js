@@ -1,12 +1,20 @@
 /* MediClear — Meta Model API client (https://api.meta.ai/v1, OpenAI-compatible) */
 (function () {
   "use strict";
-  var BASE = "https://api.meta.ai/v1";
+  // Connection modes (Ken, 02/11/2026):
+  //  - "auto" (default, recommended): app POSTs to the proxy below; no user key needed.
+  //  - "byok": app calls Meta directly with the user's own key.
+  // TODO: điều phối cấp URL thật sau khi deploy proxy trên Oracle — KHÔNG tự đoán URL.
+  var PROXY_BASE_URL = "https://PROXY_URL_PLACEHOLDER";
+  var META_BASE = "https://api.meta.ai/v1";
+  var BASE = META_BASE;
   var CHAT_MODEL = "muse-spark-1.3";
   var STT_MODEL = "muse-voice-transcribe-1.0";
 
   function headers(apiKey, extra) {
-    var h = { "Authorization": "Bearer " + apiKey };
+    var h = {};
+    // Auto (proxy) mode: no key — the proxy authenticates server-side.
+    if (apiKey) h["Authorization"] = "Bearer " + apiKey;
     if (extra) for (var k in extra) h[k] = extra[k];
     return h;
   }
@@ -33,7 +41,8 @@
 
   async function chatCompletions(apiKey, body) {
     body.reasoning_effort = body.reasoning_effort || "minimal";
-    var res = await fetchWithRetry(BASE + "/chat/completions", {
+    var base = (window.MC_API && window.MC_API.connMode === "byok") ? META_BASE : PROXY_BASE_URL;
+    var res = await fetchWithRetry(base + "/chat/completions", {
       method: "POST",
       headers: headers(apiKey, { "Content-Type": "application/json" }),
       body: JSON.stringify(body)
@@ -137,14 +146,14 @@
   }
 
   // Speech-to-text via Meta Muse Voice Transcribe model.
-  // Tries the OpenAI-compatible audio endpoint; throws on failure so the
-  // caller can fall back to the browser's built-in speech recognition.
+  // NOTE: proxy covers chat completions only — STT always goes direct (BYOK mode).
+  // In auto mode the app uses the browser's built-in speech recognition instead.
   async function transcribe(opts) {
     var fd = new FormData();
     fd.append("file", opts.audioBlob, "question.webm");
     fd.append("model", STT_MODEL);
     if (opts.langCode) fd.append("language", opts.langCode.split("-")[0]);
-    var res = await fetchWithRetry(BASE + "/audio/transcriptions", {
+    var res = await fetchWithRetry(META_BASE + "/audio/transcriptions", {
       method: "POST",
       headers: headers(opts.apiKey),
       body: fd
@@ -161,6 +170,9 @@
   }
 
   window.MC_API = {
+    connMode: "auto", // "auto" | "byok" — set by app.js from user settings
+    PROXY_BASE_URL: PROXY_BASE_URL,
+    META_BASE: META_BASE,
     analyzeBill: analyzeBill,
     askFollowUp: askFollowUp,
     transcribe: transcribe,

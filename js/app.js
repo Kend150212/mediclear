@@ -23,6 +23,7 @@
     billLang: "en",
     apiKey: "",
     mockMode: true,
+    connMode: "auto", // "auto" (proxy, recommended) | "byok" (direct Meta with own key)
     imageDataUrl: null,
     billData: null,
     analysis: null,
@@ -81,6 +82,8 @@
       btnSaveKey: "btnSaveKey", setMockH: "setMockMode", mockDesc: "mockDesc",
       setGetKeyTitle: "setGetKeyTitle", setGetKeyBody: "setGetKeyBody", btnGetKey: "btnGetKey",
       setGetKeyStep1: "setGetKeyStep1", setGetKeyStep2: "setGetKeyStep2", setGetKeyStep3: "setGetKeyStep3",
+      setConnTitle: "setConnTitle", setConnAuto: "setConnAuto", setConnAutoDesc: "setConnAutoDesc",
+      setConnByok: "setConnByok", setConnByokDesc: "setConnByokDesc",
       setUiLangH: "setUiLang", setPrivacyH: "setPrivacyTitle", privacyBody: "privacyBody",
       aboutH: "setTitle", aboutText: "aboutText", btnClearHistory: "btnClearHistory",
       tabScanL: "tabScan", tabHistoryL: "tabHistory", tabSettingsL: "tabSettings",
@@ -182,16 +185,45 @@
     el.classList.toggle("error", !!isError);
   }
 
+  // Connection mode: null = mock, "needkey" = BYOK chosen but no key saved,
+  // "auto" = proxy (no key), "byok" = direct Meta with key.
+  function liveMode() {
+    if (S.mockMode) return null;
+    if (S.connMode === "byok" && !S.apiKey) return "needkey";
+    return S.connMode;
+  }
+
+  function renderConnMode() {
+    $("connAuto").classList.toggle("selected", S.connMode === "auto");
+    $("connByok").classList.toggle("selected", S.connMode === "byok");
+    $("connAuto").setAttribute("aria-pressed", S.connMode === "auto" ? "true" : "false");
+    $("connByok").setAttribute("aria-pressed", S.connMode === "byok" ? "true" : "false");
+    // In Automatic mode no key is needed — hide the whole key section.
+    $("byokCard").hidden = (S.connMode !== "byok");
+    if (window.MC_API) window.MC_API.connMode = S.connMode;
+  }
+  function setConnMode(m) {
+    S.connMode = m;
+    localStorage.setItem("mc_connMode", m);
+    renderConnMode();
+  }
+
   async function analyze() {
     if (!S.imageDataUrl) return;
     var btn = $("btnAnalyze");
     btn.disabled = true;
     $("retryRow").hidden = true;
+    var mode = liveMode();
+    if (mode === "needkey") {
+      setStatus(s("needKeyMsg"), true);
+      btn.disabled = false;
+      return;
+    }
     setStatus(s("analyzingMsg"), false);
     try {
       var analysis;
       var langMeta_ = langMeta(S.billLang);
-      if (S.mockMode || !S.apiKey) {
+      if (mode === null) {
         var bd = S.billData || {
           id: "photo-" + Date.now(), title: "Uploaded photo",
           provider: "", providerAddress: "", billDate: "", dueDate: "",
@@ -203,7 +235,7 @@
         analysis = window.MC_mockAnalyze(bd, S.billLang);
       } else {
         analysis = await window.MC_API.analyzeBill({
-          apiKey: S.apiKey,
+          apiKey: mode === "byok" ? S.apiKey : "",
           imageDataUrl: S.imageDataUrl,
           langName: langMeta_.name,
           langCode: S.billLang
@@ -331,9 +363,18 @@
   async function renderHistory() {
     var list = $("histList");
     list.innerHTML = "";
-    var cases;
+    var cases = null;
     try { cases = await window.MC_DB.listCases(); }
-    catch (e) { cases = []; }
+    catch (e) { cases = null; }
+    if (cases === null) {
+      // Database error — NEVER pretend the history is empty (QA bug 2026-11-02).
+      $("histEmpty").hidden = true;
+      list.innerHTML = '<div class="card"><p>' + esc(s("histError")) +
+        '</p><div class="row"><button class="btn btn-secondary" id="btnHistRetry">' +
+        esc(s("btnRetry")) + '</button></div></div>';
+      $("btnHistRetry").onclick = renderHistory;
+      return;
+    }
     $("histEmpty").hidden = cases.length > 0;
     if (!cases.length) $("histEmpty").textContent = s("histEmpty");
     cases.forEach(function (c) {
@@ -402,15 +443,18 @@
     try {
       var answer;
       var langMeta_ = langMeta(S.billLang);
-      if (S.mockMode || !S.apiKey) {
+      var qmode = liveMode();
+      if (qmode === null) {
         await new Promise(function (r) { setTimeout(r, 700); });
         var fb = ((window.MC_FIXTURES || {}).qaFallback || {}).en || ["OK"];
         var pool = ((window.MC_FIXTURES || {}).qaFallback || {})[S.billLang] || fb;
         answer = pool[S.mockQaIdx % pool.length];
         S.mockQaIdx++;
+      } else if (qmode === "needkey") {
+        answer = s("needKeyMsg");
       } else {
         answer = await window.MC_API.askFollowUp({
-          apiKey: S.apiKey,
+          apiKey: qmode === "byok" ? S.apiKey : "",
           billJson: S.analysis,
           history: S.qa.slice(0, -1),
           question: text,
@@ -437,7 +481,9 @@
   async function onMic() {
     if (S.recording) { stopRecording(); return; }
     qaStatus(s("micListening"), false);
-    if (!S.mockMode && S.apiKey && micAvailable()) {
+    // Meta STT only in BYOK mode with a key (proxy covers chat completions only).
+    // In auto/mock mode the browser's built-in speech recognition is used.
+    if (!S.mockMode && S.connMode === "byok" && S.apiKey && micAvailable()) {
       try {
         var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
@@ -513,6 +559,8 @@
     S.billLang = billOk ? savedBill : S.uiLang;
     S.apiKey = localStorage.getItem("mc_apiKey") || "";
     S.mockMode = localStorage.getItem("mc_mock") !== "off";
+    var cm = localStorage.getItem("mc_connMode");
+    S.connMode = (cm === "byok" || cm === "auto") ? cm : "auto";
   }
 
   function wire() {
@@ -595,6 +643,8 @@
       S.mockMode = e.target.checked;
       localStorage.setItem("mc_mock", S.mockMode ? "on" : "off");
     };
+    $("connAuto").onclick = function () { setConnMode("auto"); };
+    $("connByok").onclick = function () { setConnMode("byok"); };
     $("uiLangSelect").onchange = function (e) {
       S.uiLang = e.target.value;
       localStorage.setItem("mc_uiLang", S.uiLang);
@@ -616,6 +666,7 @@
   function init() {
     loadPrefs();
     applyStrings();
+    renderConnMode();
     $("apiKeyInput").value = S.apiKey;
     $("mockToggle").checked = S.mockMode;
     wire();

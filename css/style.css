@@ -46,6 +46,14 @@ main { max-width: 720px; margin: 0 auto; padding: 12px 16px 24px; }
 .disclaimer { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--card-border); padding-top: 12px; margin-top: 24px; }
 .sep { border: none; border-top: 1px dashed var(--card-border); margin: 18px 0; }
 .keyhelp h4 { font-size: 1.1rem; margin: 6px 0 8px; }
+.conn-grid { display: grid; gap: 10px; margin: 10px 0 4px; }
+.conn-btn {
+  min-height: 64px; border-radius: 12px; border: 2px solid var(--card-border);
+  background: #fff; cursor: pointer; padding: 10px 14px; text-align: start;
+  display: flex; flex-direction: column; gap: 2px; font-size: 1rem;
+}
+.conn-btn strong { font-size: 1.1rem; }
+.conn-btn.selected { border-color: var(--accent); background: #eef7f5; }
 
 .tip {
   background: #eef7f5; border: 2px solid var(--accent); border-radius: var(--radius);
