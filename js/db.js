@@ -126,11 +126,16 @@
     return run("readwrite", function (s) { return reqToPromise(s.clear()); });
   }
 
+  function deleteCase(id) {
+    return run("readwrite", function (s) { return reqToPromise(s.delete(id)); });
+  }
+
   window.MC_DB = {
     addCase: addCase,
     listCases: listCases,
     getCase: getCase,
     updateCase: updateCase,
+    deleteCase: deleteCase,
     clearAll: clearAll
   };
 })();

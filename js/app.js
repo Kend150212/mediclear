@@ -67,19 +67,22 @@
     document.documentElement.dir = meta.dir || "ltr";
     var map = {
       appTitle: "appName", appTagline: "tagline",
-      consentTitle: "consentTitle", consentBody: "consentBody",
+      consentTitle: "consentTitle", consentBody: "consentP1", consentP2: "consentP2",
       btnAgree: "btnAgree", btnDecline: "btnDecline",
-      scanTitle: "scanTitle", scanSubtitle: "scanSubtitle", privacyTip: "privacyTip",
+      scanTitle: "scanTitle", scanSubtitle: "scanSubtitle", cameraHint: "cameraHint", privacyTip: "privacyTip",
       btnUpload: "btnUpload", btnPdf: "btnPdf", btnSample: "btnSample", btnSamplePdf: "btnSamplePdf",
-      sampleNote: "sampleNote",
+      sampleNote: "sampleNote", btnRetake: "btnRetake",
       langLabel: "langLabel", btnAnalyze: "btnAnalyze", btnRetry: "btnRetry",
-      resTitle: "scanTitle", resSummaryH: "resSummary", resItemsH: "resItems",
+      resTitle: "resTitle", resSummaryH: "resSummary", resItemsH: "resItems",
       resFlagsH: "resFlags", resNextH: "resNextSteps", resLetterH: "resLetter",
       btnPlayVoice: "btnPlayVoice", btnAskMore: "btnAskMore", btnNewScan: "btnNewScan",
+      savedNote: "savedNote",
       letterFrom: "letterFrom", btnCopyLetter: "btnCopy",
       qaTitle: "qaTitle", btnQaSend: "btnSend", micHint: "micHint",
-      histTitle: "histTitle",
-      btnReplayVoice: "btnPlayVoice", btnDetailAsk: "btnAskMore",
+      histTitle: "histTitle", btnHistCta: "histEmptyCta",
+      btnReplayVoice: "btnReplayVoice", btnDetailAsk: "btnAskMore",
+      btnDeleteCase: "btnDelete", confirmDeleteTitle: "confirmDeleteTitle",
+      confirmDeleteBody: "confirmDeleteBody", btnKeep: "btnKeep", btnConfirmDelete: "btnConfirmDelete",
       setTitle: "setTitle", setApiKeyH: "setApiKey", setApiKeyHint: "setApiKeyHint",
       btnSaveKey: "btnSaveKey", setMockH: "setMockMode", mockDesc: "mockDesc",
       setGetKeyTitle: "setGetKeyTitle", setGetKeyBody: "setGetKeyBody", btnGetKey: "btnGetKey",
@@ -276,7 +279,7 @@
       btn.disabled = false;
       return;
     }
-    setStatus(s("analyzingMsg"), false);
+    setStatus(s("analyzingMsg") + " " + s("analyzingNote"), false);
     try {
       var analysis;
       var langMeta_ = langMeta(S.billLang);
@@ -306,11 +309,12 @@
       };
       S.caseId = await window.MC_DB.addCase(rec);
       S.qa = [];
+      $("savedNote").textContent = s("savedNote");
       renderResults();
       showView("view-results");
     } catch (e) {
       console.error(e);
-      setStatus(s("analyzeFail") + (e && e.message ? " (" + e.message.slice(0, 120) + ")" : ""), true);
+      setStatus(s("commonError"), true);
       $("retryRow").hidden = false;
     } finally {
       btn.disabled = false;
@@ -417,9 +421,11 @@
     updatePlayButton();
   }
   function analysisSpeechText() {
+    // UX checklist: summary → amount → flags → next steps, in the chosen language.
     var a = S.analysis;
     if (!a) return "";
     var parts = [a.summary || ""];
+    if (Number(a.patientOwes) > 0) parts.push(s("lblAmount") + ": " + money(a.patientOwes) + ".");
     (a.flags || []).forEach(function (f) { parts.push(f.title + ". " + f.detail); });
     (a.nextSteps || []).slice(0, 4).forEach(function (n) { parts.push(n); });
     return parts.join(" ");
@@ -428,12 +434,12 @@
     var b = $("btnPlayVoice");
     if (b) b.textContent = S.speaking ? s("btnStopVoice") : s("btnPlayVoice");
     var r = $("btnReplayVoice");
-    if (r) r.textContent = S.speaking ? s("btnStopVoice") : s("btnPlayVoice");
+    if (r) r.textContent = S.speaking ? s("btnStopVoice") : s("btnReplayVoice");
   }
   function togglePlay() {
     if (S.speaking) { stopSpeak(); return; }
     var t = analysisSpeechText();
-    if (t) speakText(t, S.analysis && S.analysis.languageCode ? S.analysis.languageCode : S.billLang);
+    if (t) speakText(t, (S.analysis && S.analysis.language) || S.billLang);
   }
 
   // ---------- history ----------
@@ -446,6 +452,7 @@
     if (cases === null) {
       // Database error — NEVER pretend the history is empty (QA bug 2026-11-02).
       $("histEmpty").hidden = true;
+      $("histCtaRow").hidden = true;
       list.innerHTML = '<div class="card"><p>' + esc(s("histError")) +
         '</p><div class="row"><button class="btn btn-secondary" id="btnHistRetry">' +
         esc(s("btnRetry")) + '</button></div></div>';
@@ -453,6 +460,7 @@
       return;
     }
     $("histEmpty").hidden = cases.length > 0;
+    $("histCtaRow").hidden = cases.length > 0;
     if (!cases.length) $("histEmpty").textContent = s("histEmpty");
     cases.forEach(function (c) {
       var a = c.analysis || {};
@@ -476,6 +484,7 @@
     S.billLang = c.lang || S.billLang;
     S.qa = c.qa || [];
     S.imageDataUrl = c.imageDataUrl || null;
+    $("deleteConfirm").hidden = true;
     renderResults();
     // detail view reuses results markup
     $("detailBody").innerHTML = '<div id="detailClone"></div>';
@@ -670,6 +679,13 @@
 
     $("btnAnalyze").onclick = analyze;
     $("btnRetry").onclick = analyze;
+    $("btnRetake").onclick = function () {
+      // UX flow: capture → confirm → results. Retake goes back to capture.
+      S.imageDataUrl = null; S.imageDataUrls = null; S.billData = null;
+      $("previewWrap").hidden = true; $("analyzePanel").hidden = true;
+      $("previewImg").removeAttribute("src");
+      setStatus("", false);
+    };
 
     $("btnPlayVoice").onclick = togglePlay;
     $("btnBackResults").onclick = function () { stopSpeak(); showView("view-scan"); };
@@ -703,6 +719,26 @@
       if (e.key === "Enter") sendQuestion($("qaInput").value);
     });
     $("btnQaMic").onclick = onMic;
+    $("btnQaMic").setAttribute("aria-label", s("detailMic"));
+
+    // Settings is a push screen (UX: 2 tabs only), opened from the gear on Scan.
+    $("btnOpenSettings").onclick = function () { showView("view-settings"); };
+    $("btnBackSettings").onclick = function () { showView("view-scan"); };
+
+    // History empty-state CTA → Scan tab.
+    $("btnHistCta").onclick = function () { showView("view-scan"); };
+
+    // Per-case delete with inline confirm (UX: no swipe for elderly).
+    $("btnDeleteCase").onclick = function () { $("deleteConfirm").hidden = false; };
+    $("btnKeep").onclick = function () { $("deleteConfirm").hidden = true; };
+    $("btnConfirmDelete").onclick = async function () {
+      try {
+        if (S.caseId) await window.MC_DB.deleteCase(S.caseId);
+      } catch (e) { console.error(e); }
+      $("deleteConfirm").hidden = true;
+      S.caseId = null;
+      showView("view-history");
+    };
 
     $("btnBackDetail").onclick = function () { stopSpeak(); showView("view-history"); };
     $("btnReplayVoice").onclick = togglePlay;

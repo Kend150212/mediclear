@@ -22,6 +22,7 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
     <h2 id="consentTitle"></h2>
     <div class="consent-body" id="consentBody"></div>
+    <div class="consent-body" id="consentP2"></div>
     <div class="row">
       <button class="btn btn-primary" id="btnAgree"></button>
       <button class="btn btn-ghost" id="btnDecline"></button>
@@ -32,7 +33,10 @@
 <main id="main">
   <!-- TAB: SCAN -->
   <section class="view" id="view-scan">
-    <h2 id="scanTitle"></h2>
+    <div class="scan-head">
+      <h2 id="scanTitle"></h2>
+      <button class="btn btn-ghost icon-btn" id="btnOpenSettings" aria-label="settings">⚙️</button>
+    </div>
     <p class="muted" id="scanSubtitle"></p>
     <div class="tip" id="privacyTip" role="note"></div>
 
@@ -40,6 +44,7 @@
       <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="filePdf" accept="application/pdf" hidden>
       <button class="shutter" id="btnShutter" aria-label="take photo"><span aria-hidden="true">📷</span></button>
+      <p class="muted" id="cameraHint"></p>
       <div class="row center">
         <button class="btn btn-secondary" id="btnUpload"></button>
         <button class="btn btn-secondary" id="btnPdf"></button>
@@ -60,6 +65,7 @@
       <h3 id="langLabel"></h3>
       <div class="lang-grid" id="langGrid" role="listbox" aria-label="language"></div>
       <button class="btn btn-primary btn-big" id="btnAnalyze"></button>
+      <div class="row center"><button class="btn btn-secondary" id="btnRetake"></button></div>
       <p class="status" id="analyzeStatus" role="status"></p>
       <div class="row" id="retryRow" hidden><button class="btn btn-secondary" id="btnRetry"></button></div>
     </div>
@@ -70,6 +76,7 @@
     <button class="btn btn-ghost back" id="btnBackResults">‹</button>
     <h2 id="resTitle"></h2>
     <p><span class="doctype-pill" id="resDocType" hidden></span></p>
+    <p class="muted small" id="savedNote"></p>
     <div id="resultsInner">
     <div class="bill-head card">
       <div><span class="lbl" id="lblProviderR"></span><strong id="resProvider"></strong></div>
@@ -125,6 +132,7 @@
     <h2 id="histTitle"></h2>
     <div id="histList"></div>
     <p class="muted" id="histEmpty" hidden></p>
+    <div class="row center" id="histCtaRow" hidden><button class="btn btn-primary" id="btnHistCta"></button></div>
   </section>
 
   <!-- VIEW: CASE DETAIL -->
@@ -135,10 +143,22 @@
       <button class="btn btn-primary" id="btnReplayVoice"></button>
       <button class="btn btn-secondary" id="btnDetailAsk"></button>
     </div>
+    <div class="row">
+      <button class="btn btn-danger" id="btnDeleteCase"></button>
+    </div>
+    <div class="card" id="deleteConfirm" hidden>
+      <h4 id="confirmDeleteTitle"></h4>
+      <p id="confirmDeleteBody"></p>
+      <div class="row">
+        <button class="btn btn-secondary" id="btnKeep"></button>
+        <button class="btn btn-danger" id="btnConfirmDelete"></button>
+      </div>
+    </div>
   </section>
 
-  <!-- TAB: SETTINGS -->
+  <!-- TAB: SETTINGS (push screen, opened from the gear button on Scan) -->
   <section class="view" id="view-settings" hidden>
+    <button class="btn btn-ghost back" id="btnBackSettings">‹</button>
     <h2 id="setTitle"></h2>
 
     <div class="card">
@@ -197,13 +217,13 @@
 <nav class="tabbar" aria-label="main">
   <button class="tab active" data-tab="scan"><span aria-hidden="true">📷</span><span id="tabScanL"></span></button>
   <button class="tab" data-tab="history"><span aria-hidden="true">🗂️</span><span id="tabHistoryL"></span></button>
-  <button class="tab" data-tab="settings"><span aria-hidden="true">⚙️</span><span id="tabSettingsL"></span></button>
 </nav>
 
 <script src="js/i18n.js"></script>
 <script src="js/i18n-keyhelp.js"></script>
 <script src="js/i18n-conn.js"></script>
 <script src="js/i18n-doc.js"></script>
+<script src="js/i18n-ux.js"></script>
 <!-- PDF.js 3.4.120 vendored locally (Mozilla, Apache-2.0) so PDF upload works offline -->
 <script src="js/vendor/pdfjs/pdf.js"></script>
 <script src="js/fixtures.js"></script>
