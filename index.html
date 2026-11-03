@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" id="rootHtml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MediClear — Understand any medical bill</title>
+<meta name="description" content="Snap a photo of a medical bill and get a plain-language explanation in your language.">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true">+</span><span id="appTitle">MediClear</span></div>
+  <p class="tagline" id="appTagline"></p>
+</header>
+
+<!-- Consent modal -->
+<div class="modal-backdrop" id="consentModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+    <h2 id="consentTitle"></h2>
+    <div class="consent-body" id="consentBody"></div>
+    <div class="row">
+      <button class="btn btn-primary" id="btnAgree"></button>
+      <button class="btn btn-ghost" id="btnDecline"></button>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+  <!-- TAB: SCAN -->
+  <section class="view" id="view-scan">
+    <h2 id="scanTitle"></h2>
+    <div class="tip" id="privacyTip" role="note"></div>
+
+    <div class="capture-box">
+      <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
+      <button class="shutter" id="btnShutter" aria-label="take photo"><span aria-hidden="true">📷</span></button>
+      <div class="row center">
+        <button class="btn btn-secondary" id="btnUpload"></button>
+        <button class="btn btn-secondary" id="btnSample"></button>
+      </div>
+      <p class="muted small" id="sampleNote"></p>
+    </div>
+
+    <div id="previewWrap" hidden>
+      <img id="previewImg" alt="bill preview">
+      <canvas id="billCanvas" hidden></canvas>
+    </div>
+
+    <div id="analyzePanel" hidden>
+      <h3 id="langLabel"></h3>
+      <div class="lang-grid" id="langGrid" role="listbox" aria-label="language"></div>
+      <button class="btn btn-primary btn-big" id="btnAnalyze"></button>
+      <p class="status" id="analyzeStatus" role="status"></p>
+      <div class="row" id="retryRow" hidden><button class="btn btn-secondary" id="btnRetry"></button></div>
+    </div>
+  </section>
+
+  <!-- VIEW: RESULTS -->
+  <section class="view" id="view-results" hidden>
+    <button class="btn btn-ghost back" id="btnBackResults">‹</button>
+    <h2 id="resTitle"></h2>
+    <div id="resultsInner">
+    <div class="bill-head card">
+      <div><span class="lbl" id="lblProviderR"></span><strong id="resProvider"></strong></div>
+      <div><span class="lbl" id="lblDateR"></span><span id="resDate"></span></div>
+      <div class="amount-due"><span class="lbl" id="lblAmountR"></span><strong id="resAmount"></strong></div>
+    </div>
+
+    <h3 id="resSummaryH"></h3>
+    <p class="card" id="resSummary"></p>
+    <button class="btn btn-primary btn-big" id="btnPlayVoice"></button>
+
+    <h3 id="resItemsH"></h3>
+    <div id="resItems"></div>
+
+    <h3 id="resFlagsH"></h3>
+    <div id="resFlags"></div>
+
+    <h3 id="resNextH"></h3>
+    <ol class="card steps" id="resNext"></ol>
+
+    <h3 id="resLetterH"></h3>
+    <div class="card">
+      <p class="muted small" id="letterFrom"></p>
+      <h4 id="letterSubject"></h4>
+      <p class="letter-body" id="letterBody"></p>
+      <button class="btn btn-secondary" id="btnCopyLetter"></button>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" id="btnAskMore"></button>
+      <button class="btn btn-ghost" id="btnNewScan"></button>
+    </div>
+    <p class="disclaimer" id="disclaimerR"></p>
+    </div>
+  </section>
+
+  <!-- VIEW: QA -->
+  <section class="view" id="view-qa" hidden>
+    <button class="btn btn-ghost back" id="btnBackQa">‹</button>
+    <h2 id="qaTitle"></h2>
+    <div class="chat" id="qaMessages" aria-live="polite"></div>
+    <p class="status" id="qaStatus" role="status"></p>
+    <div class="qa-input-row">
+      <button class="btn btn-mic" id="btnQaMic" aria-label="voice input">🎙️</button>
+      <input type="text" id="qaInput" autocomplete="off">
+      <button class="btn btn-primary" id="btnQaSend"></button>
+    </div>
+    <p class="muted small" id="micHint"></p>
+  </section>
+
+  <!-- TAB: HISTORY -->
+  <section class="view" id="view-history" hidden>
+    <h2 id="histTitle"></h2>
+    <div id="histList"></div>
+    <p class="muted" id="histEmpty" hidden></p>
+  </section>
+
+  <!-- VIEW: CASE DETAIL -->
+  <section class="view" id="view-detail" hidden>
+    <button class="btn btn-ghost back" id="btnBackDetail">‹</button>
+    <div id="detailBody"></div>
+    <div class="row">
+      <button class="btn btn-primary" id="btnReplayVoice"></button>
+      <button class="btn btn-secondary" id="btnDetailAsk"></button>
+    </div>
+  </section>
+
+  <!-- TAB: SETTINGS -->
+  <section class="view" id="view-settings" hidden>
+    <h2 id="setTitle"></h2>
+
+    <div class="card">
+      <h3 id="setApiKeyH"></h3>
+      <p class="muted small" id="setApiKeyHint"></p>
+      <input type="password" id="apiKeyInput" autocomplete="off" spellcheck="false">
+      <div class="row"><button class="btn btn-primary" id="btnSaveKey"></button></div>
+      <p class="status" id="keyStatus" role="status"></p>
+    </div>
+
+    <div class="card">
+      <h3 id="setMockH"></h3>
+      <p class="muted small" id="mockDesc"></p>
+      <label class="switch-row">
+        <input type="checkbox" id="mockToggle">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="card">
+      <h3 id="setUiLangH"></h3>
+      <select id="uiLangSelect"></select>
+    </div>
+
+    <div class="card">
+      <h3 id="setPrivacyH"></h3>
+      <p id="privacyBody"></p>
+    </div>
+
+    <div class="card">
+      <h3 id="aboutH"></h3>
+      <p class="muted small" id="aboutText"></p>
+      <div class="row"><button class="btn btn-ghost" id="btnClearHistory"></button></div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar" aria-label="main">
+  <button class="tab active" data-tab="scan"><span aria-hidden="true">📷</span><span id="tabScanL"></span></button>
+  <button class="tab" data-tab="history"><span aria-hidden="true">🗂️</span><span id="tabHistoryL"></span></button>
+  <button class="tab" data-tab="settings"><span aria-hidden="true">⚙️</span><span id="tabSettingsL"></span></button>
+</nav>
+
+<script src="js/i18n.js"></script>
+<script src="js/fixtures.js"></script>
+<script src="js/bill-art.js"></script>
+<script src="js/db.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
