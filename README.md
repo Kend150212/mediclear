@@ -70,3 +70,9 @@ icons/              PWA icons
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Documents beyond medical bills
+MediClear auto-detects the document type (medical bill, insurance letter/EOB, contract, government letter, other) and adapts its explanation, flags, next steps, and letter draft to that type. The AI schema stays the same frame (`summary`, `items`, `flags`, `nextSteps`, `letter`) with semantics flexed per type (e.g. contracts → key clauses).
+
+## PDF upload
+The Scan tab accepts PDF uploads (limit 10 pages/file). PDF.js 3.4.120 is vendored locally at `js/vendor/pdfjs/` (Mozilla, Apache-2.0) so the PWA works fully offline — no CDN. Each page renders to an image and goes through the same vision pipeline as a photo. `assets/sample-eob.pdf` is a hand-made sample EOB (no PII) for testing the PDF flow in mock mode.

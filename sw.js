@@ -1,5 +1,5 @@
 /* MediClear service worker — offline app shell. API calls always go to network. */
-var CACHE = "mediclear-v3";
+var CACHE = "mediclear-v4";
 var SHELL = [
   "./",
   "./index.html",
@@ -8,11 +8,15 @@ var SHELL = [
   "./js/i18n.js",
   "./js/i18n-keyhelp.js",
   "./js/i18n-conn.js",
+  "./js/i18n-doc.js",
+  "./js/vendor/pdfjs/pdf.js",
+  "./js/vendor/pdfjs/pdf.worker.js",
   "./js/fixtures.js",
   "./js/bill-art.js",
   "./js/db.js",
   "./js/api.js",
   "./js/app.js",
+  "./assets/sample-eob.pdf",
   "./icons/icon.svg"
 ];
 

@@ -178,3 +178,23 @@ input[type="password"], input[type="text"], select {
 @media (min-width: 760px) {
   .lang-grid { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* Document type pill (AI auto-detect) + text-style sample-PDF link */
+.doctype-pill {
+  display: inline-block;
+  background: #e8eefc;
+  color: #1a3a8f;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.linklike {
+  background: none;
+  border: none;
+  color: #1a3a8f;
+  text-decoration: underline;
+  font-size: 1rem;
+  padding: 10px;
+  cursor: pointer;
+}

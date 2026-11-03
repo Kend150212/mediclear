@@ -1,0 +1,42 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 786 >>
+stream
+BT /F1 20 Tf 72 740 Td (SAMPLE - PRACTICE ONLY - NOT A REAL DOCUMENT) Tj ET
+BT /F1 16 Tf 72 690 Td (Sample Health Plan - Explanation of Benefits) Tj ET
+BT /F1 12 Tf 72 666 Td (Member: J. SAMPLE  |  Member ID: XXX-XX-0000) Tj ET
+BT /F1 12 Tf 72 646 Td (Date of service: 2026-10-15) Tj ET
+BT /F1 12 Tf 72 604 Td (Claim status: DENIED - X-ray of left knee \(CPT 73560\)) Tj ET
+BT /F1 12 Tf 72 584 Td (Billed amount: $480.00) Tj ET
+BT /F1 12 Tf 72 564 Td (Plan paid: $0.00) Tj ET
+BT /F1 12 Tf 72 544 Td (Your responsibility: $480.00) Tj ET
+BT /F1 12 Tf 72 502 Td (Reason: service was provided by an out-of-network facility.) Tj ET
+BT /F1 12 Tf 72 482 Td (You have the right to appeal within 60 days.) Tj ET
+BT /F1 12 Tf 72 462 Td (Questions? Call the number on the back of your card.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001078 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1148
+%%EOF

@@ -25,6 +25,7 @@
     mockMode: true,
     connMode: "auto", // "auto" (proxy, recommended) | "byok" (direct Meta with own key)
     imageDataUrl: null,
+    imageDataUrls: null, // all pages (photo = 1 page, PDF = N pages); imageDataUrl is page 1 for preview/history
     billData: null,
     analysis: null,
     caseId: null,
@@ -68,8 +69,9 @@
       appTitle: "appName", appTagline: "tagline",
       consentTitle: "consentTitle", consentBody: "consentBody",
       btnAgree: "btnAgree", btnDecline: "btnDecline",
-      scanTitle: "scanTitle", privacyTip: "privacyTip",
-      btnUpload: "btnUpload", btnSample: "btnSample", sampleNote: "sampleNote",
+      scanTitle: "scanTitle", scanSubtitle: "scanSubtitle", privacyTip: "privacyTip",
+      btnUpload: "btnUpload", btnPdf: "btnPdf", btnSample: "btnSample", btnSamplePdf: "btnSamplePdf",
+      sampleNote: "sampleNote",
       langLabel: "langLabel", btnAnalyze: "btnAnalyze", btnRetry: "btnRetry",
       resTitle: "scanTitle", resSummaryH: "resSummary", resItemsH: "resItems",
       resFlagsH: "resFlags", resNextH: "resNextSteps", resLetterH: "resLetter",
@@ -155,6 +157,7 @@
 
   function setPhoto(dataUrl, billData) {
     S.imageDataUrl = dataUrl;
+    S.imageDataUrls = [dataUrl];
     S.billData = billData || null;
     $("previewImg").src = dataUrl;
     $("previewWrap").hidden = false;
@@ -162,6 +165,60 @@
     $("retryRow").hidden = true;
     setStatus("", false);
     window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  function setPhotoMulti(urls, billData) {
+    if (!urls || !urls.length) return;
+    S.imageDataUrls = urls;
+    setPhoto(urls[0], billData); // preview shows page 1
+  }
+
+  var PDF_PAGE_LIMIT = 10;
+
+  // PDF.js is vendored locally (js/vendor/pdfjs/pdf.js) so this works offline.
+  async function handlePdfBuffer(buf) {
+    if (!window.pdfjsLib) throw new Error("pdf.js missing");
+    var pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    if (pdf.numPages > PDF_PAGE_LIMIT) {
+      setStatus(s("pdfTooMany"), true);
+      return;
+    }
+    setStatus(s("pdfReading"), false);
+    var urls = [];
+    for (var p = 1; p <= pdf.numPages; p++) {
+      var page = await pdf.getPage(p);
+      var viewport = page.getViewport({ scale: 1.5 });
+      var cv = document.createElement("canvas");
+      cv.width = viewport.width;
+      cv.height = viewport.height;
+      await page.render({ canvasContext: cv.getContext("2d"), viewport: viewport }).promise;
+      urls.push(cv.toDataURL("image/jpeg", 0.85));
+    }
+    setPhotoMulti(urls, null);
+  }
+
+  function handlePdfFile(file) {
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () {
+      handlePdfBuffer(r.result).catch(function (e) {
+        console.error(e);
+        setStatus(s("analyzeFail"), true);
+      });
+    };
+    r.readAsArrayBuffer(file);
+  }
+
+  // Sample PDF (no PII) so mock mode can test the PDF pipeline end to end.
+  function useSamplePdf() {
+    setStatus(s("pdfReading"), false);
+    fetch("assets/sample-eob.pdf").then(function (res) {
+      if (!res.ok) throw new Error("sample PDF missing");
+      return res.arrayBuffer();
+    }).then(handlePdfBuffer).catch(function (e) {
+      console.error(e);
+      setStatus(s("analyzeFail"), true);
+    });
   }
 
   function handleFile(file) {
@@ -237,6 +294,7 @@
         analysis = await window.MC_API.analyzeBill({
           apiKey: mode === "byok" ? S.apiKey : "",
           imageDataUrl: S.imageDataUrl,
+          imageDataUrls: (S.imageDataUrls && S.imageDataUrls.length) ? S.imageDataUrls : [S.imageDataUrl],
           langName: langMeta_.name,
           langCode: S.billLang
         });
@@ -260,13 +318,32 @@
   }
 
   // ---------- results ----------
+  var DOC_TYPE_KEYS = {
+    medical_bill: "docTypeBill",
+    insurance_letter: "docTypeInsurance",
+    contract: "docTypeContract",
+    government_letter: "docTypeGov",
+    other: "docTypeOther"
+  };
+
   function renderResults() {
     var a = S.analysis;
     if (!a) return;
+    // Document type pill (AI auto-detects the document kind).
+    var dtKey = DOC_TYPE_KEYS[a.documentType] || "docTypeOther";
+    var dtPill = $("resDocType");
+    dtPill.textContent = s(dtKey);
+    dtPill.hidden = false;
     $("resProvider").textContent = a.provider || "—";
     $("resDate").textContent = a.billDate || "—";
-    $("resAmount").textContent = money(a.patientOwes);
+    // Amount-due only makes sense when there is an amount (bills always show).
+    var showAmt = Number(a.patientOwes) > 0 ||
+      a.documentType === "medical_bill" || a.documentType === "insurance_letter";
+    $("resAmountRow").hidden = !showAmt;
+    if (showAmt) $("resAmount").textContent = money(a.patientOwes);
     $("resSummary").textContent = a.summary || "";
+    // Items header adapts: contracts show "key terms" instead of "charges".
+    $("resItemsH").textContent = a.documentType === "contract" ? s("resClauses") : s("resItems");
 
     var items = $("resItems");
     items.innerHTML = "";
@@ -583,6 +660,13 @@
     $("btnUpload").onclick = function () { uploadInput.click(); };
     uploadInput.onchange = function (e) { handleFile(e.target.files[0]); e.target.value = ""; };
     $("btnSample").onclick = useSampleBill;
+    // PDF upload (vendored PDF.js) + sample PDF for mock-mode testing.
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "js/vendor/pdfjs/pdf.worker.js";
+    }
+    $("btnPdf").onclick = function () { $("filePdf").click(); };
+    $("filePdf").onchange = function (e) { handlePdfFile(e.target.files[0]); e.target.value = ""; };
+    $("btnSamplePdf").onclick = useSamplePdf;
 
     $("btnAnalyze").onclick = analyze;
     $("btnRetry").onclick = analyze;
@@ -591,7 +675,7 @@
     $("btnBackResults").onclick = function () { stopSpeak(); showView("view-scan"); };
     $("btnNewScan").onclick = function () {
       stopSpeak();
-      S.imageDataUrl = null; S.billData = null; S.analysis = null;
+      S.imageDataUrl = null; S.imageDataUrls = null; S.billData = null; S.analysis = null;
       $("previewWrap").hidden = true; $("analyzePanel").hidden = true;
       showView("view-scan");
     };

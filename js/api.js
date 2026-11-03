@@ -73,32 +73,37 @@
 
   function analyzeSystemPrompt(langName) {
     return [
-      "You are MediClear, a medical-bill explainer for ordinary people, including elderly and non-native English speakers.",
-      "You receive ONE photo of a US medical bill, EOB, or insurance letter.",
-      "Respond with ONLY a valid JSON object — no markdown, no commentary. All text values in " + langName + ".",
+      "You are MediClear, a document explainer for ordinary people, including elderly and non-native English speakers.",
+      "You receive photo(s) of a DOCUMENT. It may be a US medical bill, an EOB / insurance letter, a contract or agreement, a government letter, or another document. Medical bills are the most common case, but explain ANY document type well.",
+      "First identify the document type. Then respond with ONLY a valid JSON object — no markdown, no commentary. All text values in " + langName + ".",
       "Write in plain, warm, simple language (8th-grade reading level). Short sentences. No jargon; if you must use a term like CPT or deductible, explain it in one short clause.",
       "JSON schema (use exactly these keys):",
       "{",
-      '  "provider": "hospital/clinic name",',
+      '  "documentType": "medical_bill | insurance_letter | contract | government_letter | other",',
+      '  "provider": "issuer name (hospital, insurer, company, agency)",',
       '  "billDate": "YYYY-MM-DD or best guess",',
       '  "currency": "USD",',
-      '  "patientOwes": 123.45,',
-      '  "summary": "2-4 sentence plain-language overview: what this bill is for and the bottom line",',
-      '  "lineItems": [{"description":"...","cpt":"code or empty","date":"YYYY-MM-DD","charge":0.0,"adjustment":0.0,"explanation":"one plain sentence: what this charge means and whether it looks normal","suspicious":false,"suspicionReason":"plain reason or empty"}],',
+      '  "patientOwes": 123.45,   // amount the reader is asked to pay, if any; else 0',
+      '  "summary": "2-4 sentence plain-language overview: what this document is and the bottom line",',
+      '  "lineItems": [...],   // medical bill: charges; insurance letter: key decisions/amounts; contract: key clauses/terms; government letter: key requests or deadlines',
       '  "flags": [{"severity":"high|medium|low","title":"short","detail":"1-2 plain sentences: why it matters"}],',
       '  "nextSteps": ["concrete action 1", "..."],',
-      '  "letter": {"subject":"...","body":"full dispute/appeal letter draft with [Name], [Date], [Account] placeholders"},',
+      '  "letter": {"subject":"...","body":"full draft reply/dispute/appeal letter with [Name], [Date], [Account] placeholders"},',
       '  "language": "' + langName + '"',
       "}",
-      "Flag suspicious charges: duplicate line items, wrong or upcoded CPT codes, services the patient may not have received, facility fees that look excessive, balance billing that may violate the No Surprises Act.",
-      "nextSteps must be practical: wait for the EOB before paying; compare bill vs EOB; request an itemized bill; question duplicates/wrong codes; ask about prompt-pay cash discounts (often 20-40%); ask about financial assistance / charity care; interest-free payment plans; appeal insurance denials; never put an unverified bill on a credit card.",
-      "The letter draft should match the strongest flag (duplicate charge, balance billing, or denial appeal).",
+      'lineItems entries: {"description":"...","cpt":"code or empty","date":"YYYY-MM-DD or empty","charge":0.0,"adjustment":0.0,"explanation":"one plain sentence","suspicious":false,"suspicionReason":""}',
+      "Flags by type: (medical bill) duplicate line items, wrong/upcoded CPT codes, services possibly not received, excessive facility fees, balance billing that may violate the No Surprises Act; (insurance letter/EOB) denied claims, surprising patient responsibility, appeal deadlines; (contract) unusual fees, auto-renewal, arbitration/waiver clauses, penalties — explain each in plain words; (government letter) deadlines, required actions, missing information.",
+      "nextSteps must be practical for THIS document type: (bill) wait for the EOB before paying; compare bill vs EOB; request an itemized bill; question duplicates/wrong codes; ask about prompt-pay cash discounts (often 20-40%); ask about financial assistance / charity care; interest-free payment plans; appeal insurance denials; never put an unverified bill on a credit card; (insurance) appeal deadlines and how to appeal; (contract) questions to ask before signing, get promises in writing; (government) what to do by when and where to get help.",
+      "The letter draft should fit the strongest flag (dispute, appeal, or response letter). If no letter makes sense for this document, use empty strings.",
       "End-user safety: this is INFORMATIONAL ONLY, not medical, legal, or financial advice.",
-      "If the image is not a medical bill at all, return the same JSON shape with summary explaining that, empty lineItems, and one low-severity flag noting it."
+      "If the images are not a readable document at all, return the same JSON shape with documentType 'other', summary explaining that, empty lineItems, and one low-severity flag noting it."
     ].join("\n");
   }
 
   async function analyzeBill(opts) {
+    var urls = opts.imageDataUrls && opts.imageDataUrls.length ? opts.imageDataUrls : [opts.imageDataUrl];
+    var parts = [{ type: "text", text: "Analyze this document (all pages shown in order). Return ONLY the JSON object." }];
+    urls.forEach(function (u) { parts.push({ type: "image_url", image_url: { url: u } }); });
     var content = await chatCompletions(opts.apiKey, {
       model: CHAT_MODEL,
       reasoning_effort: "minimal",
@@ -106,13 +111,7 @@
       max_completion_tokens: 6000,
       messages: [
         { role: "system", content: analyzeSystemPrompt(opts.langName) },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Analyze this medical bill photo. Return ONLY the JSON object." },
-            { type: "image_url", image_url: { url: opts.imageDataUrl } }
-          ]
-        }
+        { role: "user", content: parts }
       ]
     });
     var parsed = extractJson(content);
@@ -122,10 +121,10 @@
 
   function qaSystemPrompt(langName) {
     return [
-      "You are MediClear, a friendly medical-bill explainer. The user has a bill already analyzed (JSON context below).",
+      "You are MediClear, a friendly document explainer. The user has a document already analyzed (JSON context below — it may be a medical bill, insurance letter, contract, or government letter).",
       "Answer their follow-up questions in " + langName + ", in plain warm simple language (8th-grade level), short sentences.",
-      "Be concrete and practical. You may refer to the bill's line items, flags, and next steps.",
-      "INFORMATIONAL ONLY — not medical, legal, or financial advice. Never invent numbers not in the bill; if unsure, say so and suggest verifying with the provider or insurer.",
+      "Be concrete and practical. You may refer to the analysis's items, flags, and next steps.",
+      "INFORMATIONAL ONLY — not medical, legal, or financial advice. Never invent numbers not in the document; if unsure, say so and suggest verifying with the issuer.",
       "Keep answers under 150 words unless the question needs more."
     ].join("\n");
   }
