@@ -5,7 +5,9 @@
   //  - "auto" (default, recommended): app POSTs to the proxy below; no user key needed.
   //  - "byok": app calls Meta directly with the user's own key.
   // TODO: điều phối cấp URL thật sau khi deploy proxy trên Oracle — KHÔNG tự đoán URL.
-  var PROXY_BASE_URL = "https://PROXY_URL_PLACEHOLDER";
+  // LƯU Ý: Cloudflare Quick Tunnel đổi URL mỗi lần restart — trước giờ nộp bài
+  // điều phối sẽ báo URL cuối, Dev chỉ cần sửa đúng hằng số này.
+  var PROXY_BASE_URL = "https://definition-ruth-classes-pennsylvania.trycloudflare.com";
   var META_BASE = "https://api.meta.ai/v1";
   var BASE = META_BASE;
   var CHAT_MODEL = "muse-spark-1.3";
