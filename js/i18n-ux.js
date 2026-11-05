@@ -823,3 +823,30 @@ Object.keys(DATA).forEach(function (lang) {
   Object.keys(MAP).forEach(function (uxKey) { target[MAP[uxKey]] = src[uxKey]; });
 });
 })();
+
+/* MediClear — Ken 04/11/2026: dispute-letter language picker + wizard step indicators.
+   letterLang: label for the per-letter language select (defaults to English).
+   stepOf: wizard step indicator template, {n} = step number.
+   letterTranslating: status while the letter is being translated. */
+(function () {
+"use strict";
+var EXTRA = {
+  en: { letterLang: "Letter language", stepOf: "Step {n} of 3", letterTranslating: "Translating your letter…" },
+  es: { letterLang: "Idioma de la carta", stepOf: "Paso {n} de 3", letterTranslating: "Traduciendo su carta…" },
+  zh: { letterLang: "信件语言", stepOf: "第 {n} 步，共 3 步", letterTranslating: "正在翻译您的信件…" },
+  vi: { letterLang: "Ngôn ngữ của thư", stepOf: "Bước {n}/3", letterTranslating: "Đang dịch thư của quý vị…" },
+  ko: { letterLang: "편지 언어", stepOf: "3단계 중 {n}단계", letterTranslating: "편지를 번역하는 중…" },
+  tl: { letterLang: "Wika ng liham", stepOf: "Hakbang {n} ng 3", letterTranslating: "Isinasalin ang iyong liham…" },
+  ar: { letterLang: "لغة الرسالة", stepOf: "الخطوة {n} من 3", letterTranslating: "جارٍ ترجمة رسالتك…" },
+  ru: { letterLang: "Язык письма", stepOf: "Шаг {n} из 3", letterTranslating: "Переводим ваше письмо…" },
+  fr: { letterLang: "Langue de la lettre", stepOf: "Étape {n} sur 3", letterTranslating: "Traduction de votre lettre…" },
+  ht: { letterLang: "Lang lèt la", stepOf: "Etap {n} sou 3", letterTranslating: "N ap tradui lèt ou…" },
+  pt: { letterLang: "Idioma da carta", stepOf: "Etapa {n} de 3", letterTranslating: "Traduzindo sua carta…" },
+  pl: { letterLang: "Język listu", stepOf: "Krok {n} z 3", letterTranslating: "Tłumaczymy Twój list…" },
+  ja: { letterLang: "手紙の言語", stepOf: "3 ステップ中のステップ {n}", letterTranslating: "手紙を翻訳しています…" }
+};
+Object.keys(EXTRA).forEach(function (lang) {
+  var target = (window.MC_STRINGS = window.MC_STRINGS || {})[lang] = (window.MC_STRINGS[lang] || {});
+  Object.keys(EXTRA[lang]).forEach(function (k) { target[k] = EXTRA[lang][k]; });
+});
+})();

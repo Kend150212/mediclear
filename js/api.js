@@ -146,6 +146,22 @@
     });
   }
 
+  // Translate a dispute/appeal letter draft into another language (Ken 04/11/2026:
+  // the letter goes to a US entity, so it defaults to English, independent of UI language).
+  async function translateLetter(opts) {
+    var content = await chatCompletions(opts.apiKey, {
+      model: CHAT_MODEL,
+      reasoning_effort: "minimal",
+      response_format: { type: "json_object" },
+      max_completion_tokens: 2000,
+      messages: [
+        { role: "system", content: "You are a precise translator. Rewrite the dispute letter below in " + opts.langName + ", keeping its meaning, tone, placeholders ([Name], [Date], [Account], [Phone number]) and structure exactly. Respond with ONLY a valid JSON object: {\"subject\": \"...\", \"body\": \"...\"}. No markdown, no commentary." },
+        { role: "user", content: "Subject: " + (opts.letter.subject || "") + "\n\nBody:\n" + (opts.letter.body || "") }
+      ]
+    });
+    return extractJson(content);
+  }
+
   // Speech-to-text via Meta Muse Voice Transcribe model.
   // NOTE: proxy covers chat completions only — STT always goes direct (BYOK mode).
   // In auto mode the app uses the browser's built-in speech recognition instead.
@@ -176,6 +192,7 @@
     META_BASE: META_BASE,
     analyzeBill: analyzeBill,
     askFollowUp: askFollowUp,
+    translateLetter: translateLetter,
     transcribe: transcribe,
     CHAT_MODEL: CHAT_MODEL,
     STT_MODEL: STT_MODEL

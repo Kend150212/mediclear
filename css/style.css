@@ -349,6 +349,30 @@ input[type="password"], input[type="text"], select {
 .tab .ic { width: 26px; height: 26px; }
 .tab.active { color: var(--color-primary); }
 
+/* ---------- Wizard (Ken 04/11/2026: each step is its own screen) ---------- */
+.step-ind {
+  font-family: var(--font-outlier); font-size: 0.9rem; color: var(--color-muted);
+  margin: 0 0 var(--space-xs); font-variant-numeric: tabular-nums;
+}
+.analyzing-box { text-align: center; padding: var(--space-2xl) var(--space-md); }
+.analyzing-box h2 { margin: var(--space-md) 0 var(--space-sm); }
+.spinner {
+  width: 64px; height: 64px; margin: 0 auto;
+  border-radius: 50%;
+  border: 6px solid var(--color-accent-soft);
+  border-top-color: var(--color-primary);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Dispute letter language picker ---------- */
+.letter-lang-row {
+  display: flex; align-items: center; gap: var(--space-sm);
+  margin-bottom: var(--space-sm); flex-wrap: wrap;
+}
+.letter-lang-row .lbl { font-family: var(--font-body); color: var(--color-muted); font-size: 0.95rem; }
+.letter-lang-sel { width: auto; min-width: 200px; flex: 1; margin: 0; }
+
 /* ---------- RTL (Arabic): mirror layout, keep figures LTR ---------- */
 [dir="rtl"] .back { transform: scaleX(-1); }
 [dir="rtl"] .money, [dir="rtl"] #resAmount, [dir="rtl"] .amount-due strong,

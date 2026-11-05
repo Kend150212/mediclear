@@ -31,12 +31,13 @@
 </div>
 
 <main id="main">
-  <!-- TAB: SCAN -->
+  <!-- TAB: SCAN — wizard step 1 -->
   <section class="view" id="view-scan">
     <div class="scan-head">
       <h2 id="scanTitle"></h2>
       <button class="btn btn-ghost icon-btn" id="btnOpenSettings" aria-label="settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
+    <p class="step-ind" id="stepScan"></p>
     <p class="muted" id="scanSubtitle"></p>
     <div class="tip" id="privacyTip" role="note"></div>
 
@@ -55,13 +56,18 @@
       </div>
       <p class="muted small" id="sampleNote"></p>
     </div>
+  </section>
 
-    <div id="previewWrap" hidden>
+  <!-- VIEW: REVIEW — wizard step 2 (confirm photo + language) -->
+  <section class="view" id="view-review" hidden>
+    <button class="btn btn-ghost back" id="btnBackReview">‹</button>
+    <p class="step-ind" id="stepReview"></p>
+    <div id="previewWrap">
       <img id="previewImg" alt="bill preview" data-src="camera-capture">
       <canvas id="billCanvas" hidden aria-hidden="true"></canvas>
     </div>
 
-    <div id="analyzePanel" hidden>
+    <div id="analyzePanel">
       <h3 id="langLabel"></h3>
       <div class="lang-grid" id="langGrid" role="listbox" aria-label="language"></div>
       <button class="btn btn-primary btn-big" id="btnAnalyze"></button>
@@ -71,9 +77,20 @@
     </div>
   </section>
 
-  <!-- VIEW: RESULTS -->
+  <!-- VIEW: ANALYZING — transition state between step 2 and 3 -->
+  <section class="view" id="view-analyzing" hidden>
+    <p class="step-ind" id="stepAnalyzing"></p>
+    <div class="analyzing-box">
+      <div class="spinner" role="status" aria-label="analyzing"></div>
+      <h2 id="analyzingTitle"></h2>
+      <p class="muted" id="analyzingNote"></p>
+    </div>
+  </section>
+
+  <!-- VIEW: RESULTS — wizard step 3 -->
   <section class="view" id="view-results" hidden>
     <button class="btn btn-ghost back" id="btnBackResults">‹</button>
+    <p class="step-ind" id="stepResults"></p>
     <h2 id="resTitle"></h2>
     <p><span class="doctype-pill" id="resDocType" hidden></span></p>
     <p class="muted small" id="savedNote"></p>
@@ -99,9 +116,14 @@
 
     <h3 id="resLetterH"></h3>
     <div class="card label-card">
+      <div class="letter-lang-row">
+        <label class="lbl" for="letterLangSel" id="letterLangLabel"></label>
+        <select id="letterLangSel" class="letter-lang-sel"></select>
+      </div>
       <p class="muted small" id="letterFrom"></p>
       <p class="letter-subject" id="letterSubject"></p>
       <p class="letter-body" id="letterBody"></p>
+      <p class="status" id="letterStatus" role="status"></p>
       <button class="btn btn-secondary" id="btnCopyLetter"></button>
     </div>
 
