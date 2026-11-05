@@ -1,5 +1,7 @@
 /* MediClear service worker — offline app shell. API calls always go to network. */
-var CACHE = "mediclear-redesign-v1";
+/* RULE (Ken 04/11/2026): EVERY push that changes a SHELL file MUST bump CACHE below,
+   or browsers keep serving the old cached files forever (SW only updates on byte change). */
+var CACHE = "mediclear-redesign-v2";
 var SHELL = [
   "./",
   "./index.html",
