@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>MediClear — Understand any medical bill</title>
+<title>MediClear: Understand your medical bills</title>
 <meta name="description" content="Snap a photo of a medical bill and get a plain-language explanation in your language.">
 <meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="manifest.json">
@@ -31,19 +31,20 @@
 </div>
 
 <main id="main">
-  <!-- TAB: SCAN -->
+  <!-- TAB: SCAN — wizard step 1 -->
   <section class="view" id="view-scan">
     <div class="scan-head">
       <h2 id="scanTitle"></h2>
-      <button class="btn btn-ghost icon-btn" id="btnOpenSettings" aria-label="settings">⚙️</button>
+      <button class="btn btn-ghost icon-btn" id="btnOpenSettings" aria-label="settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
+    <p class="step-ind" id="stepScan"></p>
     <p class="muted" id="scanSubtitle"></p>
     <div class="tip" id="privacyTip" role="note"></div>
 
     <div class="capture-box">
       <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="filePdf" accept="application/pdf" hidden>
-      <button class="shutter" id="btnShutter" aria-label="take photo"><span aria-hidden="true">📷</span></button>
+      <button class="shutter" id="btnShutter" aria-label="take photo"><svg class="ic ic-shutter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <p class="muted" id="cameraHint"></p>
       <div class="row center">
         <button class="btn btn-secondary" id="btnUpload"></button>
@@ -55,13 +56,18 @@
       </div>
       <p class="muted small" id="sampleNote"></p>
     </div>
+  </section>
 
-    <div id="previewWrap" hidden>
-      <img id="previewImg" alt="bill preview">
-      <canvas id="billCanvas" hidden></canvas>
+  <!-- VIEW: REVIEW — wizard step 2 (confirm photo + language) -->
+  <section class="view" id="view-review" hidden>
+    <button class="btn btn-ghost back" id="btnBackReview">‹</button>
+    <p class="step-ind" id="stepReview"></p>
+    <div id="previewWrap">
+      <img id="previewImg" alt="bill preview" data-src="camera-capture">
+      <canvas id="billCanvas" hidden aria-hidden="true"></canvas>
     </div>
 
-    <div id="analyzePanel" hidden>
+    <div id="analyzePanel">
       <h3 id="langLabel"></h3>
       <div class="lang-grid" id="langGrid" role="listbox" aria-label="language"></div>
       <button class="btn btn-primary btn-big" id="btnAnalyze"></button>
@@ -71,14 +77,25 @@
     </div>
   </section>
 
-  <!-- VIEW: RESULTS -->
+  <!-- VIEW: ANALYZING — transition state between step 2 and 3 -->
+  <section class="view" id="view-analyzing" hidden>
+    <p class="step-ind" id="stepAnalyzing"></p>
+    <div class="analyzing-box">
+      <div class="spinner" role="status" aria-label="analyzing"></div>
+      <h2 id="analyzingTitle"></h2>
+      <p class="muted" id="analyzingNote"></p>
+    </div>
+  </section>
+
+  <!-- VIEW: RESULTS — wizard step 3 -->
   <section class="view" id="view-results" hidden>
     <button class="btn btn-ghost back" id="btnBackResults">‹</button>
+    <p class="step-ind" id="stepResults"></p>
     <h2 id="resTitle"></h2>
     <p><span class="doctype-pill" id="resDocType" hidden></span></p>
     <p class="muted small" id="savedNote"></p>
     <div id="resultsInner">
-    <div class="bill-head card">
+    <div class="bill-head card label-card">
       <div><span class="lbl" id="lblProviderR"></span><strong id="resProvider"></strong></div>
       <div><span class="lbl" id="lblDateR"></span><span id="resDate"></span></div>
       <div class="amount-due" id="resAmountRow"><span class="lbl" id="lblAmountR"></span><strong id="resAmount"></strong></div>
@@ -98,10 +115,15 @@
     <ol class="card steps" id="resNext"></ol>
 
     <h3 id="resLetterH"></h3>
-    <div class="card">
+    <div class="card label-card">
+      <div class="letter-lang-row">
+        <label class="lbl" for="letterLangSel" id="letterLangLabel"></label>
+        <select id="letterLangSel" class="letter-lang-sel"></select>
+      </div>
       <p class="muted small" id="letterFrom"></p>
-      <h4 id="letterSubject"></h4>
+      <p class="letter-subject" id="letterSubject"></p>
       <p class="letter-body" id="letterBody"></p>
+      <p class="status" id="letterStatus" role="status"></p>
       <button class="btn btn-secondary" id="btnCopyLetter"></button>
     </div>
 
@@ -120,7 +142,7 @@
     <div class="chat" id="qaMessages" aria-live="polite"></div>
     <p class="status" id="qaStatus" role="status"></p>
     <div class="qa-input-row">
-      <button class="btn btn-mic" id="btnQaMic" aria-label="voice input">🎙️</button>
+      <button class="btn btn-mic" id="btnQaMic" aria-label="voice input"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg></button>
       <input type="text" id="qaInput" autocomplete="off">
       <button class="btn btn-primary" id="btnQaSend"></button>
     </div>
@@ -147,7 +169,7 @@
       <button class="btn btn-danger" id="btnDeleteCase"></button>
     </div>
     <div class="card" id="deleteConfirm" hidden>
-      <h4 id="confirmDeleteTitle"></h4>
+      <p class="dialog-title" id="confirmDeleteTitle"></p>
       <p id="confirmDeleteBody"></p>
       <div class="row">
         <button class="btn btn-secondary" id="btnKeep"></button>
@@ -215,8 +237,8 @@
 </main>
 
 <nav class="tabbar" aria-label="main">
-  <button class="tab active" data-tab="scan"><span aria-hidden="true">📷</span><span id="tabScanL"></span></button>
-  <button class="tab" data-tab="history"><span aria-hidden="true">🗂️</span><span id="tabHistoryL"></span></button>
+  <button class="tab active" data-tab="scan"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span id="tabScanL"></span></button>
+  <button class="tab" data-tab="history"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg><span id="tabHistoryL"></span></button>
 </nav>
 
 <script src="js/i18n.js"></script>

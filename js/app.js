@@ -31,7 +31,9 @@
     caseId: null,
     qa: [],
     mockQaIdx: 0,
-    speaking: false
+    speaking: false,
+    letterLang: (function () { try { return localStorage.getItem("mc_letterLang") || "en"; } catch (e) { return "en"; } })(),
+    letterCache: {} // per-analysis {langCode: {subject, body}}
   };
 
   // TODO: coordinator cung cấp URL lấy key Meta — KHÔNG tự đoán URL.
@@ -72,6 +74,8 @@
       scanTitle: "scanTitle", scanSubtitle: "scanSubtitle", cameraHint: "cameraHint", privacyTip: "privacyTip",
       btnUpload: "btnUpload", btnPdf: "btnPdf", btnSample: "btnSample", btnSamplePdf: "btnSamplePdf",
       sampleNote: "sampleNote", btnRetake: "btnRetake",
+      analyzingTitle: "analyzingMsg", analyzingNote: "analyzingNote",
+      letterLangLabel: "letterLang",
       langLabel: "langLabel", btnAnalyze: "btnAnalyze", btnRetry: "btnRetry",
       resTitle: "resTitle", resSummaryH: "resSummary", resItemsH: "resItems",
       resFlagsH: "resFlags", resNextH: "resNextSteps", resLetterH: "resLetter",
@@ -102,12 +106,18 @@
     $("btnShutter").setAttribute("aria-label", s("btnShutter"));
     $("qaInput").placeholder = s("qaPlaceholder");
     $("apiKeyInput").placeholder = s("setApiKeyPh");
+    // wizard step indicators (Ken 04/11/2026: each step is its own screen)
+    var stepOf = function (n) { return s("stepOf").replace("{n}", String(n)); };
+    if ($("stepScan")) $("stepScan").textContent = stepOf(1);
+    if ($("stepReview")) $("stepReview").textContent = stepOf(2);
+    if ($("stepAnalyzing")) $("stepAnalyzing").textContent = stepOf(2);
+    if ($("stepResults")) $("stepResults").textContent = stepOf(3);
     buildLangGrid();
     buildUiLangSelect();
   }
 
   // ---------- views ----------
-  var VIEWS = ["view-scan", "view-history", "view-settings", "view-results", "view-qa", "view-detail"];
+  var VIEWS = ["view-scan", "view-review", "view-analyzing", "view-history", "view-settings", "view-results", "view-qa", "view-detail"];
   function showView(id) {
     VIEWS.forEach(function (v) { $(v).hidden = (v !== id); });
     document.querySelectorAll(".tab").forEach(function (t) {
@@ -163,11 +173,10 @@
     S.imageDataUrls = [dataUrl];
     S.billData = billData || null;
     $("previewImg").src = dataUrl;
-    $("previewWrap").hidden = false;
-    $("analyzePanel").hidden = false;
     $("retryRow").hidden = true;
     setStatus("", false);
-    window.scrollTo(0, document.body.scrollHeight);
+    // wizard step 2: review screen (photo + language + analyze)
+    showView("view-review");
   }
 
   function setPhotoMulti(urls, billData) {
@@ -275,11 +284,13 @@
     $("retryRow").hidden = true;
     var mode = liveMode();
     if (mode === "needkey") {
+      // stay on the review screen for this error (user must add a key)
       setStatus(s("needKeyMsg"), true);
       btn.disabled = false;
       return;
     }
-    setStatus(s("analyzingMsg") + " " + s("analyzingNote"), false);
+    // wizard: analyzing is its own screen between step 2 and step 3
+    showView("view-analyzing");
     try {
       var analysis;
       var langMeta_ = langMeta(S.billLang);
@@ -309,11 +320,14 @@
       };
       S.caseId = await window.MC_DB.addCase(rec);
       S.qa = [];
+      S.letterCache = {};
       $("savedNote").textContent = s("savedNote");
       renderResults();
       showView("view-results");
     } catch (e) {
       console.error(e);
+      // back to the review screen; the photo is kept for retry
+      showView("view-review");
       setStatus(s("commonError"), true);
       $("retryRow").hidden = false;
     } finally {
@@ -359,7 +373,7 @@
         '<span class="money">' + esc(money(it.charge)) + '</span></div>' +
         (it.cpt ? '<div class="cpt">CPT ' + esc(it.cpt) + (it.date ? " · " + esc(it.date) : "") + '</div>' : "") +
         '<p class="expl">' + esc(it.explanation || "") + '</p>' +
-        (it.suspicious && it.suspicionReason ? '<p class="expl"><strong>⚠ ' + esc(it.suspicionReason) + '</strong></p>' : "");
+        (it.suspicious && it.suspicionReason ? '<p class="expl suspicion"><svg class="ic ic-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><strong>' + esc(it.suspicionReason) + '</strong></p>' : "");
       items.appendChild(d);
     });
 
@@ -373,7 +387,9 @@
       var sevLabel = sev === "high" ? s("sevHigh") : sev === "medium" ? s("sevMedium") : s("sevLow");
       var d = document.createElement("div");
       d.className = "flag " + sev;
-      d.innerHTML = '<div class="sev">' + esc(sevLabel) + '</div><h4>' +
+      // Dose voice: severity as a double-ringed stamp, never red, sentence case untracked.
+      d.innerHTML = '<div class="sev"><span class="stamp' + (sev === "high" ? "" : " stamp--grey") + '">' +
+        esc(sevLabel) + '</span></div><h4>' +
         esc(f.title) + '</h4><p>' + esc(f.detail) + '</p>';
       flags.appendChild(d);
     });
@@ -388,7 +404,97 @@
 
     $("letterSubject").textContent = (a.letter && a.letter.subject) || "";
     $("letterBody").textContent = (a.letter && a.letter.body) || "";
+    setupLetterPicker($("view-results"), a);
     updatePlayButton();
+  }
+
+  // ---------- dispute letter language (Ken 04/11/2026) ----------
+  // The letter goes to a US entity: it defaults to English, independent of the
+  // app UI language. The user can switch it to any of the 13 languages.
+  function buildLetterLangOptions(sel) {
+    sel.innerHTML = "";
+    MC_LANGS.forEach(function (L) {
+      var o = document.createElement("option");
+      o.value = L.code;
+      o.textContent = L.name;
+      if (L.code === S.letterLang) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+  function paintLetter(root, L) {
+    var q = function (id) { return root.querySelector("#" + id); };
+    var subj = q("letterSubject"), body = q("letterBody");
+    if (subj) subj.textContent = (L && L.subject) || "";
+    if (body) body.textContent = (L && L.body) || "";
+  }
+  function letterStatus(root, msg, isError) {
+    var el = root.querySelector("#letterStatus");
+    if (!el) return;
+    el.textContent = msg || "";
+    el.classList.toggle("error", !!isError);
+  }
+  function mockLetterFor(target) {
+    // demo mode: reuse the fixture letters (en/vi/es per sample bill)
+    var bd = S.billData || {};
+    var A = (window.MC_FIXTURES && window.MC_FIXTURES.analyses) || {};
+    if (bd.id && A[bd.id] && A[bd.id][target] && A[bd.id][target].letter) {
+      return A[bd.id][target].letter;
+    }
+    if (bd.id && A[bd.id] && A[bd.id].en && A[bd.id].en.letter) {
+      return A[bd.id].en.letter;
+    }
+    return (S.analysis && S.analysis.letter) || { subject: "", body: "" };
+  }
+  async function getLetter(analysis, target) {
+    if (S.letterCache[target]) return S.letterCache[target];
+    var base = (analysis && analysis.letter) || { subject: "", body: "" };
+    if (target === analysis.language) {
+      S.letterCache[target] = base;
+      return base;
+    }
+    var mode = liveMode();
+    var out;
+    if (mode === null) {
+      out = mockLetterFor(target);
+    } else {
+      var lm = langMeta(target);
+      out = await window.MC_API.translateLetter({
+        apiKey: mode === "byok" ? S.apiKey : "",
+        letter: base,
+        langName: lm.name,
+        langCode: target
+      });
+    }
+    S.letterCache[target] = out;
+    return out;
+  }
+  function setupLetterPicker(root, analysis) {
+    var sel = root.querySelector("#letterLangSel");
+    if (!sel || !analysis) return;
+    buildLetterLangOptions(sel);
+    var load = function () {
+      var target = sel.value;
+      S.letterLang = target;
+      try { localStorage.setItem("mc_letterLang", target); } catch (e) {}
+      letterStatus(root, "", false);
+      // instant path: requested language == analysis language, or cached
+      if (target === analysis.language || S.letterCache[target]) {
+        paintLetter(root, S.letterCache[target] || analysis.letter);
+        return;
+      }
+      letterStatus(root, s("letterTranslating"), false);
+      getLetter(analysis, target).then(function (L) {
+        if (sel.value !== target) return; // user switched again meanwhile
+        paintLetter(root, L);
+        letterStatus(root, "", false);
+      }).catch(function (e) {
+        console.error(e);
+        paintLetter(root, analysis.letter); // fall back to the original letter
+        letterStatus(root, s("commonError"), true);
+      });
+    };
+    sel.onchange = load;
+    load();
   }
 
   // ---------- voice output (Web Speech API; Meta has no TTS) ----------
@@ -484,11 +590,14 @@
     S.billLang = c.lang || S.billLang;
     S.qa = c.qa || [];
     S.imageDataUrl = c.imageDataUrl || null;
+    S.letterCache = {};
     $("deleteConfirm").hidden = true;
     renderResults();
     // detail view reuses results markup
     $("detailBody").innerHTML = '<div id="detailClone"></div>';
     $("detailClone").innerHTML = $("resultsInner").innerHTML;
+    // the cloned letter picker needs its own binding for this saved case
+    setupLetterPicker($("detailClone"), c.analysis);
     showView("view-detail");
   }
 
@@ -680,12 +789,13 @@
     $("btnAnalyze").onclick = analyze;
     $("btnRetry").onclick = analyze;
     $("btnRetake").onclick = function () {
-      // UX flow: capture → confirm → results. Retake goes back to capture.
+      // wizard: retake goes back to step 1 (capture)
       S.imageDataUrl = null; S.imageDataUrls = null; S.billData = null;
-      $("previewWrap").hidden = true; $("analyzePanel").hidden = true;
       $("previewImg").removeAttribute("src");
       setStatus("", false);
+      showView("view-scan");
     };
+    $("btnBackReview").onclick = function () { showView("view-scan"); };
 
     $("btnPlayVoice").onclick = togglePlay;
     $("btnBackResults").onclick = function () { stopSpeak(); showView("view-scan"); };

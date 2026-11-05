@@ -4,10 +4,9 @@
   // Connection modes (Ken, 02/11/2026):
   //  - "auto" (default, recommended): app POSTs to the proxy below; no user key needed.
   //  - "byok": app calls Meta directly with the user's own key.
-  // TODO: điều phối cấp URL thật sau khi deploy proxy trên Oracle — KHÔNG tự đoán URL.
-  // LƯU Ý: Cloudflare Quick Tunnel đổi URL mỗi lần restart — trước giờ nộp bài
-  // điều phối sẽ báo URL cuối, Dev chỉ cần sửa đúng hằng số này.
-  var PROXY_BASE_URL = "https://definition-ruth-classes-pennsylvania.trycloudflare.com";
+  // Stable API URL (Ken 04/11/2026): mediclear-api.wishtraveler.com — replaces the
+  // temporary Cloudflare Quick Tunnel URL, which changed on every tunnel restart.
+  var PROXY_BASE_URL = "https://mediclear-api.wishtraveler.com";
   var META_BASE = "https://api.meta.ai/v1";
   var BASE = META_BASE;
   var CHAT_MODEL = "muse-spark-1.3";
@@ -146,6 +145,22 @@
     });
   }
 
+  // Translate a dispute/appeal letter draft into another language (Ken 04/11/2026:
+  // the letter goes to a US entity, so it defaults to English, independent of UI language).
+  async function translateLetter(opts) {
+    var content = await chatCompletions(opts.apiKey, {
+      model: CHAT_MODEL,
+      reasoning_effort: "minimal",
+      response_format: { type: "json_object" },
+      max_completion_tokens: 2000,
+      messages: [
+        { role: "system", content: "You are a precise translator. Rewrite the dispute letter below in " + opts.langName + ", keeping its meaning, tone, placeholders ([Name], [Date], [Account], [Phone number]) and structure exactly. Respond with ONLY a valid JSON object: {\"subject\": \"...\", \"body\": \"...\"}. No markdown, no commentary." },
+        { role: "user", content: "Subject: " + (opts.letter.subject || "") + "\n\nBody:\n" + (opts.letter.body || "") }
+      ]
+    });
+    return extractJson(content);
+  }
+
   // Speech-to-text via Meta Muse Voice Transcribe model.
   // NOTE: proxy covers chat completions only — STT always goes direct (BYOK mode).
   // In auto mode the app uses the browser's built-in speech recognition instead.
@@ -176,6 +191,7 @@
     META_BASE: META_BASE,
     analyzeBill: analyzeBill,
     askFollowUp: askFollowUp,
+    translateLetter: translateLetter,
     transcribe: transcribe,
     CHAT_MODEL: CHAT_MODEL,
     STT_MODEL: STT_MODEL
