@@ -641,9 +641,14 @@
       var qmode = liveMode();
       if (qmode === null) {
         await new Promise(function (r) { setTimeout(r, 700); });
-        var fb = ((window.MC_FIXTURES || {}).qaFallback || {}).en || ["OK"];
-        var pool = ((window.MC_FIXTURES || {}).qaFallback || {})[S.billLang] || fb;
-        answer = pool[S.mockQaIdx % pool.length];
+        // BUGFIX 04/11/2026 (Ken): mock Q&A must interpolate the fallback template
+        // with the current case's provider/amount — never show raw {{provider}}.
+        var billInfo = {
+          provider: (S.analysis && S.analysis.provider) || (S.billData && S.billData.provider) || "",
+          patientOwes: (S.analysis && S.analysis.patientOwes != null) ? S.analysis.patientOwes
+            : (S.billData && S.billData.patientOwes)
+        };
+        answer = window.MC_qaFallbackReply(S.billLang, S.mockQaIdx, billInfo);
         S.mockQaIdx++;
       } else if (qmode === "needkey") {
         answer = s("needKeyMsg");
